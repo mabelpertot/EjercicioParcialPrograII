@@ -62,7 +62,7 @@ public class VentasController implements Initializable {
 
         try {
             
-            listaProductos = Data.leerProductos(FILE_PATH);
+            listaProductos = Archivo.leerProductos(FILE_PATH);
             tvProductos.getItems().setAll(listaProductos);
             mostrarMensaje("Productos cargados con éxito.", true);
         } catch (RuntimeException e) {
@@ -141,7 +141,7 @@ public class VentasController implements Initializable {
             String ticketContent = null;
             try {
                 Double total = totalCompra();
-                ticketContent = Data.generarTicket(listaCarrito, total, TICKET_PATH);
+                ticketContent = Archivo.generarTicket(listaCarrito, total, TICKET_PATH);
 
                 for (CarritoItem item : listaCarrito) {
                     Producto p = item.getProducto();
@@ -151,7 +151,7 @@ public class VentasController implements Initializable {
                         .ifPresent(prod -> prod.setStock(prod.getStock() - item.getCantidad()));
                 }
 
-                Data.guardarProductos(new ArrayList<>(listaProductos), FILE_PATH);
+                Archivo.guardarProductos(new ArrayList<>(listaProductos), FILE_PATH);
 
                 if (ticketContent != null) {
                     mostrarTicket(ticketContent);
@@ -220,10 +220,12 @@ public class VentasController implements Initializable {
         alert.showAndWait();
     }
 
-    private static class Data {
+    private static class Archivo {
         
         public static List<Producto> leerProductos(String filePath) {
-            try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(filePath))) {
+            ObjectInputStream ois = null;
+            try{
+                ois = new ObjectInputStream(new FileInputStream(filePath));
                 @SuppressWarnings("unchecked")
                 List<Producto> productos = (List<Producto>) ois.readObject();
                 return productos;
@@ -231,12 +233,30 @@ public class VentasController implements Initializable {
                 return new ArrayList<>();
             } catch (IOException | ClassNotFoundException e) {
                 throw new RuntimeException(e);
+            } finally{
+                if (ois!= null){
+                    try{
+                        ois.close();
+                    } catch (IOException ex){
+                        System.err.println("Error al cerrar ObjectInputStream: " + ex.getMessage());
+                    }
+                }
             }
         }
 
         public static void guardarProductos(List<Producto> productos, String filePath) throws IOException {
-            try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(filePath))) {
+            ObjectOutputStream oos = null;
+            try{
+                oos = new ObjectOutputStream(new FileOutputStream(filePath));
                 oos.writeObject(productos);
+            } finally {
+                if (oos != null) {
+                    try{
+                        oos.close();
+                    } catch (IOException ex){
+                        System.err.println("Error al cerrar ObjectInputStream: " + ex.getMessage());
+                    }
+                }
             }
         }
         
@@ -285,7 +305,7 @@ public class VentasController implements Initializable {
                 productosIniciales.add(new Producto("Parlantes Genius", 45.45, 30));
                 
                 try {
-                    Data.guardarProductos(productosIniciales, filePath);
+                    Archivo.guardarProductos(productosIniciales, filePath);
                 } catch (IOException e) {
                     System.err.println("Error al crear el archivo inicial de productos: " + e.getMessage());
                 }
